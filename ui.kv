@@ -1,0 +1,647 @@
+#:import dp kivy.metrics.dp
+#:import MapSource kivy_garden.mapview.source.MapSource
+#:import MapView kivy_garden.mapview.MapView
+#:import Factory kivy.factory.Factory
+#:import SpinnerOption kivy.uix.spinner.SpinnerOption
+
+<BigSpinnerOption@SpinnerOption>:
+    font_size: '24sp'
+    height: '52dp'
+
+<StreetItem>:
+    orientation: 'horizontal'
+    size_hint_y: None
+    height: '40dp'
+    Label:
+        text: root.street_name
+    Label:
+        text: root.units
+    Button:
+        text: 'Done'
+        on_release: root.on_done()
+
+<RootWidget>:
+    LoginScreen:
+        name: 'login'
+    ManagerScreen:
+        name: 'manager'
+    SupervisorScreen:
+        name: 'supervisor'
+    UserScreen:
+        name: 'user'
+
+<LoginScreen>:
+    FloatLayout:
+        BoxLayout:
+            orientation: 'vertical'
+            padding: '30dp'
+            spacing: '20dp'
+            size_hint: (0.85, None)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            height: self.minimum_height
+            Label:
+                text: 'Sign in'
+                size_hint_y: None
+                height: '72dp'
+                font_size: '40sp'
+                bold: True
+                halign: 'center'
+            BoxLayout:
+                size_hint_y: None
+                height: '56dp'
+                spacing: '16dp'
+                Label:
+                    text: 'Role:'
+                    size_hint_x: None
+                    width: '140dp'
+                    font_size: '26sp'
+                Spinner:
+                    id: role_spinner
+                    text: root.selected_role if root.selected_role else 'Select role'
+                    values: root.roles
+                    font_size: '26sp'
+                    size_hint_y: None
+                    height: '56dp'
+                    on_text: root.on_role_selected(self.text)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                opacity: 1 if root.selected_role == 'supervisor' else 0
+                disabled: False if root.selected_role == 'supervisor' else True
+                BoxLayout:
+                    size_hint_y: None
+                    height: '56dp'
+                    spacing: '16dp'
+                    Label:
+                        text: 'Supervisor:'
+                        size_hint_x: None
+                        width: '140dp'
+                        font_size: '26sp'
+                    Spinner:
+                        text: root.selected_supervisor_name if root.selected_supervisor_name else 'Select supervisor'
+                        values: [s['name'] for s in root.supervisors]
+                        font_size: '26sp'
+                        size_hint_y: None
+                        height: '56dp'
+                        on_text: root.selected_supervisor_name = self.text
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                opacity: 1 if root.selected_role == 'user' else 0
+                disabled: False if root.selected_role == 'user' else True
+                BoxLayout:
+                    size_hint_y: None
+                    height: '56dp'
+                    spacing: '16dp'
+                    Label:
+                        text: 'User:'
+                        size_hint_x: None
+                        width: '140dp'
+                        font_size: '26sp'
+                    Spinner:
+                        text: root.selected_user_name if root.selected_user_name else 'Select user'
+                        values: [u['name'] for u in root.users]
+                        font_size: '26sp'
+                        size_hint_y: None
+                        height: '56dp'
+                        on_text: root.selected_user_name = self.text
+            BoxLayout:
+                size_hint_y: None
+                height: '60dp'
+                spacing: '16dp'
+                Button:
+                    text: 'Login'
+                    font_size: '28sp'
+                    on_release: root.login()
+                Button:
+                    text: 'Refresh'
+                    font_size: '28sp'
+                    on_release: root.refresh_lists()
+            Label:
+                text: root.login_message
+                size_hint_y: None
+                height: '40dp'
+                font_size: '24sp'
+                halign: 'center'
+
+<ManagerScreen>:
+    ScrollView:
+        GridLayout:
+            cols: 1
+            spacing: '12dp'
+            padding: '12dp'
+            size_hint_y: None
+            height: self.minimum_height
+            
+            Label:
+                text: 'Manager Dashboard'
+                size_hint_y: None
+                height: '72dp'
+                font_size: '36sp'
+                bold: True
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '56dp'
+                spacing: '10dp'
+                Button:
+                    text: 'Refresh'
+                    font_size: '24sp'
+                    on_release: root.refresh_lists(clear=True)
+                Button:
+                    text: 'Clear Cache'
+                    font_size: '24sp'
+                    on_release: root.clear_cache()
+                Button:
+                    text: 'Log out'
+                    font_size: '24sp'
+                    on_release: app.logout()
+            
+            # --- Campaign Management ---
+            Label:
+                text: 'Campaign Management'
+                size_hint_y: None
+                height: '52dp'
+                font_size: '28sp'
+                bold: True
+            
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '50dp'
+                spacing: '8dp'
+                Button:
+                    text: 'Create Campaign' if not root.show_campaign_input else 'Cancel'
+                    font_size: '24sp'
+                    size_hint_x: 0.35
+                    on_release: root.toggle_campaign_input()
+                Label:
+                    size_hint_x: 0.65
+            
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: '8dp'
+                opacity: 1 if root.show_campaign_input else 0
+                disabled: False if root.show_campaign_input else True
+                BoxLayout:
+                    orientation: 'horizontal'
+                    size_hint_y: None
+                    height: '48dp'
+                    spacing: '8dp'
+                    Label:
+                        text: 'Name:'
+                        size_hint_x: 0.15
+                        font_size: '22sp'
+                    TextInput:
+                        hint_text: 'Campaign name'
+                        text: root.new_campaign_name
+                        multiline: False
+                        font_size: '22sp'
+                        on_text: root.new_campaign_name = self.text
+                BoxLayout:
+                    orientation: 'horizontal'
+                    size_hint_y: None
+                    height: '48dp'
+                    spacing: '8dp'
+                    Label:
+                        text: 'Packs:'
+                        size_hint_x: 0.15
+                        font_size: '22sp'
+                    TextInput:
+                        hint_text: 'Number of packs'
+                        text: root.new_campaign_packs
+                        multiline: False
+                        font_size: '22sp'
+                        input_filter: 'int'
+                        on_text: root.new_campaign_packs = self.text
+                    Label:
+                        text: 'Units/pack:'
+                        size_hint_x: 0.2
+                        font_size: '22sp'
+                    TextInput:
+                        hint_text: 'Units per pack'
+                        text: root.new_campaign_units
+                        multiline: False
+                        font_size: '22sp'
+                        input_filter: 'int'
+                        on_text: root.new_campaign_units = self.text
+                Button:
+                    text: 'Create Campaign'
+                    size_hint_y: None
+                    height: '46dp'
+                    font_size: '24sp'
+                    on_release: root.create_campaign()
+            
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '50dp'
+                spacing: '8dp'
+                Button:
+                    text: 'Create Supervisor' if not root.show_supervisor_input else 'Cancel'
+                    font_size: '24sp'
+                    size_hint_x: 0.35
+                    on_release: root.toggle_supervisor_input()
+                Label:
+                    size_hint_x: 0.65
+
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '48dp'
+                spacing: '8dp'
+                opacity: 1 if root.show_supervisor_input else 0
+                disabled: False if root.show_supervisor_input else True
+                TextInput:
+                    hint_text: 'Supervisor name'
+                    text: root.new_supervisor_name
+                    multiline: False
+                    font_size: '22sp'
+                    size_hint_x: 0.7
+                    on_text: root.new_supervisor_name = self.text
+                Button:
+                    text: 'Create'
+                    font_size: '22sp'
+                    size_hint_x: 0.3
+                    on_release: root.create_supervisor()
+            
+            # --- Supervisor Management ---
+            Label:
+                text: 'Supervisor Management'
+                size_hint_y: None
+                height: '52dp'
+                font_size: '28sp'
+                bold: True
+            
+            Label:
+                text: 'Campaign:'
+                size_hint_y: None
+                height: '36dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_campaign if root.selected_campaign else 'Select Campaign'
+                values: [c['name'] for c in root.campaigns]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_campaign_selected(self.text)
+            
+            Label:
+                text: 'Region:'
+                size_hint_y: None
+                height: '36dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_region if root.selected_region else 'Select Region'
+                values: [r['name'] for r in root.regions]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_region_selected(self.text)
+            
+            Label:
+                text: 'Province:'
+                size_hint_y: None
+                height: '36dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_province if root.selected_province else 'Select Province'
+                values: [p['name'] for p in root.provinces]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_province_selected(self.text)
+            
+            Label:
+                text: 'District:'
+                size_hint_y: None
+                height: '36dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_district if root.selected_district else 'Select District'
+                values: [d['name'] for d in root.districts]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_district_selected(self.text)
+            
+            Label:
+                text: 'City:'
+                size_hint_y: None
+                height: '36dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_city if root.selected_city else 'Select City'
+                values: [c['name'] for c in root.cities]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_city_selected(self.text)
+            
+            Label:
+                text: 'Area:'
+                size_hint_y: None
+                height: '36dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_area if root.selected_area else 'Select Area'
+                values: [a['name'] for a in root.geo_areas]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_area_selected(self.text)
+            
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '56dp'
+                spacing: '8dp'
+                Spinner:
+                    text: root.selected_supervisor_name if root.selected_supervisor_name else 'Select Supervisor'
+                    values: root.supervisor_names
+                    option_cls: Factory.get('BigSpinnerOption')
+                    size_hint_x: 0.55
+                    font_size: '26sp'
+                    on_text: root.on_supervisor_selected(self.text)
+                Button:
+                    text: 'Assign Area'
+                    font_size: '24sp'
+                    size_hint_x: 0.45
+                    on_release: root.assign_neighborhood()
+            
+            Label:
+                text: root.summary_text
+                size_hint_y: None
+                height: '48dp'
+                font_size: '24sp'
+                color: (0.1, 0.7, 0.2, 1)
+                bold: True
+                halign: 'center'
+                valign: 'middle'
+
+<SupervisorScreen>:
+    ScrollView:
+        GridLayout:
+            cols: 1
+            spacing: '10dp'
+            padding: '10dp'
+            size_hint_y: None
+            height: self.minimum_height
+            
+            Label:
+                text: 'Supervisor Dashboard'
+                size_hint_y: None
+                height: '60dp'
+                font_size: '32sp'
+                bold: True
+            
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '54dp'
+                spacing: '10dp'
+                Button:
+                    text: 'Refresh'
+                    font_size: '24sp'
+                    on_release: root.refresh_lists()
+                Button:
+                    text: 'Clear Cache'
+                    font_size: '24sp'
+                    on_release: root.clear_cache()
+                Button:
+                    text: 'Log out'
+                    font_size: '24sp'
+                    on_release: app.logout()
+            
+            # --- Campaign Management ---
+            Label:
+                text: 'Campaign Management'
+                size_hint_y: None
+                height: '48dp'
+                font_size: '26sp'
+                bold: True
+            
+            Label:
+                text: 'Select Campaign:'
+                size_hint_y: None
+                height: '34dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_campaign if root.selected_campaign else 'Select Campaign'
+                values: [c['name'] for c in root.campaigns]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_campaign_selected(self.text)
+            
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '50dp'
+                spacing: '8dp'
+                Button:
+                    text: 'Create User' if not root.show_create_user_input else 'Cancel'
+                    font_size: '24sp'
+                    size_hint_x: 0.35
+                    on_release: root.toggle_create_user()
+                Label:
+                    size_hint_x: 0.65
+            
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '48dp'
+                spacing: '8dp'
+                opacity: 1 if root.show_create_user_input else 0
+                disabled: False if root.show_create_user_input else True
+                TextInput:
+                    hint_text: 'New user name'
+                    text: root.new_user_name
+                    multiline: False
+                    font_size: '22sp'
+                    size_hint_x: 0.7
+                    on_text: root.new_user_name = self.text
+                Button:
+                    text: 'Create'
+                    font_size: '22sp'
+                    size_hint_x: 0.3
+                    on_release: root.create_user()
+            
+            # --- User Management ---
+            Label:
+                text: 'User Management'
+                size_hint_y: None
+                height: '48dp'
+                font_size: '26sp'
+                bold: True
+            
+            Label:
+                text: 'Select Area:'
+                size_hint_y: None
+                height: '34dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_area if root.selected_area else 'Select Area'
+                values: [a['name'] for a in root.geo_areas]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.on_area_selected(self.text)
+            
+            Label:
+                text: 'Select Streets:'
+                size_hint_y: None
+                height: '34dp'
+                font_size: '22sp'
+            Button:
+                text: root.street_button_label
+                size_hint_y: None
+                height: '52dp'
+                font_size: '24sp'
+                on_release: root.select_streets_popup()
+            Label:
+                text: 'Select User:'
+                size_hint_y: None
+                height: '34dp'
+                font_size: '22sp'
+            Spinner:
+                text: root.selected_user_name if root.selected_user_name else 'Select User'
+                values: [u['name'] for u in root.users]
+                option_cls: Factory.get('BigSpinnerOption')
+                size_hint_y: None
+                height: '56dp'
+                font_size: '26sp'
+                on_text: root.set_user_by_name(self.text)
+            
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: '56dp'
+                spacing: '8dp'
+                Button:
+                    text: 'Assign'
+                    font_size: '24sp'
+                    on_release: root.assign_streets()
+            
+            Label:
+                text: root.summary_text
+                size_hint_y: None
+                height: '44dp'
+                font_size: '24sp'
+                color: (0.1, 0.7, 0.2, 1)
+                bold: True
+                halign: 'center'
+                valign: 'middle'
+            
+            Label:
+                text: root.message
+                size_hint_y: None
+                height: '40dp'
+                font_size: '22sp'
+                color: (0.2, 0.6, 0.2, 1)
+            
+            Label:
+                text: 'Assigned Streets'
+                size_hint_y: None
+                height: '36dp'
+                font_size: '22sp'
+                bold: True
+            ScrollView:
+                size_hint_y: None
+                height: '100dp'
+                Label:
+                    text: '\\n'.join([f"{s['name']} -> {s['user_name'] or 'unassigned'}" for s in root.assigned]) if root.assigned else 'None'
+                    font_size: '20sp'
+                    size_hint_y: None
+                    height: self.texture_size[1] + dp(10)
+
+<UserScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '12dp'
+        spacing: '12dp'
+        Label:
+            text: 'User Dashboard'
+            size_hint_y: None
+            height: '60dp'
+            font_size: '32sp'
+            bold: True
+        Label:
+            text: 'Assigned user: ' + root.user_name
+            size_hint_y: None
+            height: '40dp'
+            font_size: '22sp'
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: '12dp'
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_x: 0.45
+                ScrollView:
+                    GridLayout:
+                        id: street_list
+                        cols: 1
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: '8dp'
+                        spacing: '8dp'
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_y: None
+                            height: '36dp'
+                            Label:
+                                text: 'Street'
+                                font_size: '20sp'
+                            Label:
+                                text: 'Units'
+                                font_size: '20sp'
+            MapView:
+                id: map_view
+                lat: 50.94
+                lon: 4.38
+                zoom: 12
+                cache_dir: app.map_cache_dir
+                map_source: app.map_source
+                size_hint_x: 0.55
+        Button:
+            text: 'Compute Route'
+            size_hint_y: None
+            height: '48dp'
+            on_release: root.compute_route()
+        Label:
+            id: route_output
+            text: root.route_text
+            halign: 'left'
+            valign: 'top'
+            text_size: self.width, None
+            size_hint_y: None
+            height: self.texture_size[1] + dp(10)
+        BoxLayout:
+            size_hint_y: None
+            height: '48dp'
+            spacing: '8dp'
+            Label:
+                text: 'Legend:'
+                size_hint_x: None
+                width: '80dp'
+            Label:
+                text: 'Blue line = route, pins = assigned stops.'
+        BoxLayout:
+            size_hint_y: None
+            height: '40dp'
+            spacing: '12dp'
+            Button:
+                text: 'Log out'
+                on_release: app.logout()
