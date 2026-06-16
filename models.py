@@ -503,12 +503,89 @@ def seed_belgium_sample():
     """Seed complete Belgian geography with real neighborhoods."""
     if get_regions():
         return
-    # Helper: add city with neighborhoods
-    def add_city_with_areas(name, district_id, areas):
-        cid = add_municipality(name, district_id)
-        for a in areas:
-            add_neighborhood(a, cid)
+    # Helper: add city with neighborhoods AND seed areas + streets
+    def add_city_with_streets(city_name, district_id, neighborhoods):
+        """Add municipality, neighborhoods, areas table entries, and sample streets."""
+        cid = add_municipality(city_name, district_id)
+        import random as _rnd
+        # Approximate center coordinates for major Belgian cities
+        coords_map = {
+            'Antwerp': (51.2195, 4.4024),
+            'Brussels City': (50.8503, 4.3517),
+            'Ghent': (51.0543, 3.7174),
+            'Bruges': (51.2093, 3.2247),
+            'Leuven': (50.8798, 4.7005),
+            'Mechelen': (51.0259, 4.4776),
+            'Hasselt': (50.9307, 5.3385),
+            'Genk': (50.9661, 5.5021),
+            'Liège': (50.6326, 5.5797),
+            'Namur': (50.4673, 4.8718),
+            'Mons': (50.4541, 3.9569),
+            'Charleroi': (50.4114, 4.4447),
+            'Kortrijk': (50.8279, 3.2648),
+            'Ostend': (51.2154, 2.9286),
+            'Vilvoorde': (50.9276, 4.4257),
+            'Halle': (50.7366, 4.2370),
+            'Sint-Niklaas': (51.1645, 4.1392),
+            'Aalst': (50.9381, 4.0395),
+            'Turnhout': (51.3224, 4.9446),
+            'Ypres': (50.8511, 2.8853),
+            'Verviers': (50.5910, 5.8642),
+            'Tournai': (50.6063, 3.3892),
+            'Arlon': (49.6833, 5.8167),
+            'Dinant': (50.2609, 4.9122),
+        }
+        base_lat, base_lon = coords_map.get(city_name, (50.85, 4.35))
+        street_names_nl = [
+            'Kerkstraat', 'Schoolstraat', 'Molenstraat', 'Stationsstraat',
+            'Veldstraat', 'Kapelstraat', 'Brugstraat', 'Marktstraat',
+            'Lindelaan', 'Eikenlaan', 'Beukenlaan', 'Kastanjelaan',
+            'Dorpstraat', 'Steenweg', 'Heirbaan', 'Leuvensesteenweg',
+            'Mechelsesteenweg', 'Brusselsesteenweg', 'Antwerpsesteenweg',
+            'Sint-Annastraat', 'Sint-Jorisstraat', 'Sint-Pietersstraat',
+        ]
+        street_names_fr = [
+            'Rue de l\'Église', 'Rue du Centre', 'Avenue des Tilleuls',
+            'Rue de la Station', 'Rue du Moulin', 'Rue de la Chapelle',
+            'Grand-Rue', 'Rue Neuve', 'Boulevard du Nord', 'Rue Haute',
+            'Avenue Victor Hugo', 'Rue de la Liberté', 'Place du Marché',
+            'Rue des Écoles', 'Chaussée de Bruxelles',
+        ]
+        street_names = street_names_nl if city_name in ['Antwerp', 'Ghent', 'Bruges', 'Leuven', 'Mechelen',
+            'Hasselt', 'Genk', 'Kortrijk', 'Ostend', 'Vilvoorde', 'Halle',
+            'Sint-Niklaas', 'Aalst', 'Turnhout', 'Ypres', 'Edegem', 'Schoten',
+            'Brasschaat', 'Deinze', 'Merelbeke', 'Lier', 'Willebroek',
+            'Dendermonde', 'Zele', 'Eeklo', 'Oudenaarde', 'Ronse', 'Beveren',
+            'Lokeren', 'Zaventem', 'Dilbeek', 'Tienen', 'Diest', 'Aarschot',
+            'Sint-Truiden', 'Maaseik', 'Lommel', 'Tongeren', 'Bilzen',
+            'Knokke-Heist', 'Diksmuide', 'Poperinge', 'Waregem', 'Menen',
+            'Bredene', 'Roeselare', 'Izegem', 'Tielt', 'Veurne', 'De Panne',
+            'Geel', 'Mol', 'Herentals'] else street_names_fr
+        for area_name in neighborhoods:
+            # Create area entry
+            aid = add_area(area_name, city_name, None, None)
+            # Update with neighborhood_id
+            nid = add_neighborhood(area_name, cid)
+            conn = connect()
+            conn.execute('UPDATE areas SET neighborhood_id=? WHERE id=?', (nid, aid))
+            conn.commit()
+            conn.close()
+            # Add 3-5 streets per area
+            n_streets = _rnd.randint(3, 5)
+            used_names = set()
+            for _ in range(n_streets):
+                sname = _rnd.choice(street_names)
+                while sname in used_names:
+                    sname = _rnd.choice(street_names)
+                    sname = f"{sname} {_rnd.randint(2, 50)}" if sname in used_names else sname
+                used_names.add(sname)
+                slat = base_lat + _rnd.uniform(-0.015, 0.015)
+                slon = base_lon + _rnd.uniform(-0.015, 0.015)
+                units = _rnd.randint(10, 80)
+                add_street(sname, aid, units, slat, slon)
         return cid
+
+    add_city_with_areas = add_city_with_streets  # backward compat alias
 
     # ── Flanders ──────────────────────────────────────────────
     flanders = add_region('Flanders')
